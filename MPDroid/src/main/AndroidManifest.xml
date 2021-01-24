@@ -24,12 +24,16 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Used to start the service upon boot if the service requires persistence. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Cover art cache -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <!-- Wake Lock for Streaming -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Required to get current WiFi network SSID -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Required to get current WiFi network SSID (Android API 30+) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <application
         android:name="com.namelessdev.mpdroid.MPDApplication"

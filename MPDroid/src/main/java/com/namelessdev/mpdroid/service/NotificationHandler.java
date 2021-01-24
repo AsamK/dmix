@@ -28,6 +28,7 @@ import com.namelessdev.mpdroid.helpers.MPDControl;
 
 import android.annotation.TargetApi;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -35,6 +36,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Build;
 import androidx.core.app.NotificationCompat;
+
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -55,6 +57,8 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
 
     private static final int NOTIFICATION_ID = 1;
 
+    private static final String NOTIFICATION_CHANNEL_ID = "MEDIA_NOTIFICATION";
+
     private static final String TAG = "NotificationHandler";
 
     private static final String FULLY_QUALIFIED_NAME = MPDroidService.PACKAGE_NAME + TAG;
@@ -68,6 +72,10 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
     private final NotificationManager mNotificationManager;
 
     private final MPDroidService mServiceContext;
+
+    private final RemoteViews mContentView;
+
+    private final RemoteViews mBigContentView;
 
     private Music mCurrentTrack;
 
@@ -85,15 +93,23 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
         mNotificationManager = (NotificationManager) mServiceContext
                 .getSystemService(Context.NOTIFICATION_SERVICE);
 
-        final RemoteViews resultView = new RemoteViews(mServiceContext.getPackageName(),
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            final NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, "Media notification", NotificationManager.IMPORTANCE_LOW);
+            mNotificationManager.createNotificationChannel(channel);
+        }
+        mContentView = new RemoteViews(mServiceContext.getPackageName(),
                 R.layout.notification);
 
-        buildBaseNotification(resultView);
-        mNotification = buildCollapsedNotification(serviceContext).setContent(resultView).build();
+        buildBaseNotification(mContentView);
+        mBigContentView = buildExpandedNotification();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            buildExpandedNotification();
-        }
+        mNotification = buildCollapsedNotification(serviceContext)
+                .setContent(mContentView)
+                .setCustomBigContentView(mBigContentView)
+                .build();
+
+        // deprecated
+        mNotification.bigContentView = mBigContentView;
 
         mIsActive = true;
     }
@@ -112,13 +128,13 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
                 .getActivity(context, 0, musicPlayerActivity,
                         PendingIntent.FLAG_UPDATE_CURRENT);
 
-        final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
+        final NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
         builder.setSmallIcon(R.drawable.icon_notification);
         builder.setContentIntent(notificationClick);
-        builder.setStyle(new NotificationCompat.BigTextStyle());
+        builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder.setVisibility(Notification.VISIBILITY_PUBLIC);
+            builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         }
 
         return builder;
@@ -165,12 +181,8 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
      */
     private static void setAlbumCover(final RemoteViews resultView, final Bitmap albumCover) {
         if (albumCover == null) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT_WATCH) {
-                resultView.setImageViewResource(R.id.notificationIcon, R.drawable.no_cover_art);
-            } else {
-                resultView.setImageViewResource(R.id.notificationIcon,
-                        R.drawable.no_cover_art_light);
-            }
+            resultView.setImageViewResource(R.id.notificationIcon,
+                    R.drawable.no_cover_art_light);
         } else {
             resultView.setImageViewBitmap(R.id.notificationIcon, albumCover);
         }
@@ -213,7 +225,7 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
      * for the expanded notification RemoteViews.
      */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    private void buildExpandedNotification() {
+    private RemoteViews buildExpandedNotification() {
         final PendingIntent previousAction = buildPendingIntent(MPDControl.ACTION_PREVIOUS);
         final RemoteViews resultView = new RemoteViews(mServiceContext.getPackageName(),
                 R.layout.notification_big);
@@ -222,7 +234,7 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
 
         resultView.setOnClickPendingIntent(R.id.notificationPrev, previousAction);
 
-        mNotification.bigContentView = resultView;
+        return resultView;
     }
 
     /**
@@ -249,10 +261,8 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
     @Override
     public final void onCoverUpdate(final Bitmap albumCover) {
         if (mIsActive) {
-            setAlbumCover(mNotification.contentView, albumCover);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                setAlbumCover(mNotification.bigContentView, albumCover);
-            }
+            setAlbumCover(mContentView, albumCover);
+            setAlbumCover(mBigContentView, albumCover);
             updateNotification();
         }
     }
@@ -277,11 +287,9 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
                 setMediaPlayerBuffering(false);
             }
 
-            mNotification.contentView.setViewVisibility(R.id.notificationClose, View.VISIBLE);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                mNotification.bigContentView
-                        .setViewVisibility(R.id.notificationClose, View.VISIBLE);
-            }
+            mContentView.setViewVisibility(R.id.notificationClose, View.VISIBLE);
+            mBigContentView
+                    .setViewVisibility(R.id.notificationClose, View.VISIBLE);
 
             updateNotification();
         }
@@ -299,19 +307,15 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
             if (mIsMediaPlayerBuffering) {
                 final String title = currentTrack.getTitle();
 
-                updateBufferingContent(mNotification.contentView, title);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    updateBufferingContent(mNotification.bigContentView, title);
-                    mNotification.bigContentView.setTextViewText(R.id.notificationAlbum,
-                            currentTrack.getArtistName());
-                }
+                updateBufferingContent(mContentView, title);
+                updateBufferingContent(mBigContentView, title);
+                mBigContentView.setTextViewText(R.id.notificationAlbum,
+                        currentTrack.getArtistName());
             } else {
-                updateNotBufferingContent(mNotification.contentView, currentTrack);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    updateNotBufferingContent(mNotification.bigContentView, currentTrack);
-                    mNotification.bigContentView.setTextViewText(R.id.notificationAlbum,
-                            currentTrack.getAlbumName());
-                }
+                updateNotBufferingContent(mContentView, currentTrack);
+                updateNotBufferingContent(mBigContentView, currentTrack);
+                mBigContentView.setTextViewText(R.id.notificationAlbum,
+                        currentTrack.getAlbumName());
             }
 
             updateNotification();
@@ -326,15 +330,11 @@ public class NotificationHandler implements AlbumCoverHandler.NotificationCallba
     final void setPlayState(final boolean isPlaying) {
         if (mIsActive) {
             if (isPlaying) {
-                updateStatePlaying(mNotification.contentView);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    updateStatePlaying(mNotification.bigContentView);
-                }
+                updateStatePlaying(mContentView);
+                updateStatePlaying(mBigContentView);
             } else {
-                updateStatePaused(mNotification.contentView);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    updateStatePaused(mNotification.bigContentView);
-                }
+                updateStatePaused(mContentView);
+                updateStatePaused(mBigContentView);
             }
 
             updateNotification();
