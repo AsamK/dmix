@@ -39,11 +39,10 @@ def gitShortHash() {
 
 android {
     compileSdkVersion 30
-    buildToolsVersion '30.0.2'
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 30
         versionCode 58
         versionName "1.08 Beta 4 " + gitShortHash()
     }
@@ -76,7 +75,7 @@ android {
             dimension "version"
             versionName defaultConfig.versionName + "-f"
             dependencies {
-                testImplementation 'junit:junit:4.12'
+                testImplementation 'junit:junit:4.13.1'
                 testImplementation "org.robolectric:robolectric:3.0"
             }
             ext.enableCrashlytics = false;
@@ -138,7 +137,7 @@ dependencies {
     implementation project(':JMPDCommAndroid')
     // Libraries from maven
     implementation 'asia.ivity.android:drag-sort-listview:1.0'
-    implementation 'org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations:1.6.0'
+    implementation 'org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations:1.7.0'
     implementation 'asia.ivity.android:drag-sort-listview-apklib:1.0'
 }
 

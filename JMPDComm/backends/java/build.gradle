@@ -34,8 +34,8 @@ group "com.anpmech.mpd"
 version "1.0-SNAPSHOT"
 
 dependencies {
-    testImplementation 'junit:junit:4.13'
-    implementation 'org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations:1.6.0'
+    testImplementation 'junit:junit:4.13.1'
+    implementation 'org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations:1.7.0'
 }
 
 repositories {
