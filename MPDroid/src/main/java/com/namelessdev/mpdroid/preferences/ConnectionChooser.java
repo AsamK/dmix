@@ -17,6 +17,9 @@
 package com.namelessdev.mpdroid.preferences;
 
 import com.namelessdev.mpdroid.R;
+import com.namelessdev.mpdroid.tools.SettingsHelper;
+
+import org.jetbrains.annotations.NotNull;
 
 import android.content.Context;
 import android.net.wifi.WifiConfiguration;
@@ -26,6 +29,7 @@ import android.preference.Preference;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -133,29 +137,40 @@ public class ConnectionChooser extends PreferenceFragment {
      */
     private static void getWifiEntries(final PreferenceScreen screen,
             final Iterable<WifiConfiguration> wifiList) {
+        final String currentSSID = SettingsHelper.getCurrentSSID();
+        if (!TextUtils.isEmpty(currentSSID)) {
+            final Preference ssidItem = getSsidPreference(screen, true, currentSSID);
+            screen.addPreference(ssidItem);
+        }
+
         for (final WifiConfiguration wifi : wifiList) {
             if (wifi != null && wifi.SSID != null) {
-                // Friendly SSID-Name
-                final Matcher matcher = QUOTATION_DELIMITER.matcher(wifi.SSID);
-                final String ssid = matcher.replaceAll("");
-
-                final Preference ssidItem = new Preference(screen.getContext());
-
-                ssidItem.setPersistent(false);
-                ssidItem.setKey("wifiNetwork" + ssid);
-                ssidItem.setTitle(ssid);
-                ssidItem.getExtras().putString(ConnectionModifier.EXTRA_SERVICE_SET_ID, ssid);
-                ssidItem.setFragment(ConnectionSettings.FRAGMENT_MODIFIER_NAME);
-
-                if (WifiConfiguration.Status.CURRENT == wifi.status) {
-                    ssidItem.setSummary(R.string.connected);
-                } else {
-                    ssidItem.setSummary(R.string.notInRange);
-                }
-
+                final Preference ssidItem = getSsidPreference(screen, WifiConfiguration.Status.CURRENT == wifi.status, wifi.SSID);
                 screen.addPreference(ssidItem);
             }
         }
+    }
+
+    @NotNull
+    private static Preference getSsidPreference(final PreferenceScreen screen, final boolean connected, String ssid) {
+        // Friendly SSID-Name
+        final Matcher matcher = QUOTATION_DELIMITER.matcher(ssid);
+        ssid = matcher.replaceAll("");
+
+        final Preference ssidItem = new Preference(screen.getContext());
+
+        ssidItem.setPersistent(false);
+        ssidItem.setKey("wifiNetwork" + ssid);
+        ssidItem.setTitle(ssid);
+        ssidItem.getExtras().putString(ConnectionModifier.EXTRA_SERVICE_SET_ID, ssid);
+        ssidItem.setFragment(ConnectionSettings.FRAGMENT_MODIFIER_NAME);
+
+        if (connected) {
+            ssidItem.setSummary(R.string.connected);
+        } else {
+            ssidItem.setSummary(R.string.notInRange);
+        }
+        return ssidItem;
     }
 
     @Override
@@ -170,10 +185,8 @@ public class ConnectionChooser extends PreferenceFragment {
         screen.addPreference(getDefaultCategory(context));
         screen.addPreference(getDefaultItem(context));
 
-        if (!wifiList.isEmpty()) {
-            screen.addPreference(getWifiCategory(context));
-            getWifiEntries(screen, wifiList);
-        }
+        screen.addPreference(getWifiCategory(context));
+        getWifiEntries(screen, wifiList);
 
         setPreferenceScreen(screen);
     }
