@@ -13,17 +13,11 @@ local.properties
 # Mac OS thumbnail db
 .DS_Store
 
-# Recommended ignore from Gradle
-.idea/dataSources.*
-.idea/inspectionProfiles
-.idea/misc.xml
-.idea/tasks.xml
-
-.idea/dictionaries
-.idea/libraries
-
-# Local IDEA workspace
-.idea/workspace.xml
+# intellij
+.idea/*
+!.idea/codeStyles/
+!.idea/codeStyleSettings.xml
+*.iml
 
 # Gradle cache
 .gradle
